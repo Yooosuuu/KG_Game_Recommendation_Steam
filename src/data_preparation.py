@@ -1,4 +1,5 @@
 """ Data preparation functions """
+import ast
 import json
 import os
 import re
@@ -117,16 +118,18 @@ class SteamDataFrame:
         """ Delete specified columns from dataframe """
         self.df = self.df.drop(columns=columns, errors='ignore')
         return self
-
+    
     def parse_list_column(self, column_name):
-        """ Parse columns stored as JSON strings or comma-separated into lists
-            Useful for genres, tags, categories, developers, languages """
         def parse(val):
             if pd.isna(val):
                 return []
             try:
-                return json.loads(val)
-            except (json.JSONDecodeError, TypeError):
+                result = ast.literal_eval(str(val))
+                if isinstance(result, dict):
+                    return list(result.keys())
+                if isinstance(result, list):
+                    return result
+            except (ValueError, SyntaxError):
                 return [x.strip() for x in str(val).split(',')]
         self.df[column_name] = self.df[column_name].apply(parse)
         return self
