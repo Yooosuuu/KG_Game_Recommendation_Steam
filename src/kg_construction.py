@@ -5,9 +5,11 @@ import data_preparation as dp
 from dotenv import load_dotenv
 import os
 import tqdm
+from neo4jConnector import Neo4jConnector
 
-class KnowledgeGraphBuilder:
+class KnowledgeGraphBuilder(Neo4jConnector):
     def __init__(self, merged_df):
+        super().__init__()
         self.merged_df = merged_df
         
     def create_neo4j_graph(self):
@@ -18,26 +20,12 @@ class KnowledgeGraphBuilder:
         password = os.environ["NEO4J_PASSWORD"]
         driver = GraphDatabase.driver(uri, auth=(user, password))
         self.driver = driver
-
-    def close(self):
-        """ Close the Neo4j driver connection """
-        self.driver.close()
         
     def __enter__(self):
         """ Context manager entry point to initialize the graph connection and create constraints """
-        self.create_neo4j_graph()
+        self.connect()
         self.create_constraints()
         return self
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        """ Context manager exit point to ensure the graph connection is closed """
-        self.close()
-        
-    def print_graph_summary(self):
-        with self.driver.session() as session:
-            node_count = session.run("MATCH (n) RETURN count(n)").single()[0]
-            rel_count = session.run("MATCH ()-[r]->() RETURN count(r)").single()[0]
-            print(f"Nodes: {node_count}, Relationships: {rel_count}")
 
     def create_constraints(self):
         """ Create uniqueness constraints for Game, Genre, Tag, Developer, Publisher and User nodes in Neo4j """
