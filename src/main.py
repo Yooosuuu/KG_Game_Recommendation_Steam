@@ -1,5 +1,6 @@
 import data_preparation as dp
 import kg_construction as kg
+import datalog_rules as dr
 
 if __name__ == "__main__":
     steam_games = dp.SteamDataFrame().load('../data/cleaned_steam_games.csv')
@@ -9,10 +10,15 @@ if __name__ == "__main__":
     for col in ['genres', 'tags', 'developers', 'publishers']:
         merged_df.parse_list_column(col)
 
-    with kg.KnowledgeGraphBuilder(merged_df.filter_users_by_game_count(min_games=3)) as kg_builder:
-        kg_builder.create_all_nodes()
-        kg_builder.create_all_relationships()
-        kg_builder.print_graph_summary()
+    # with kg.KnowledgeGraphBuilder(merged_df.filter_users_by_game_count(min_games=3)) as kg_builder:
+    #     kg_builder.create_all_nodes()
+    #     kg_builder.create_all_relationships()
+    #     kg_builder.print_graph_summary()
+    
+    with dr.DatalogReasoner() as rule_applier:
+        rule_applier.reset_similar_to()
+        rule_applier.apply_all_rules()
+        rule_applier.print_graph_summary()
 
     # matches = dp.match_games(steam_games.df, user_data.df)
     # merged_df = (dp.SteamDataFrame(dp.merge_datasets(steam_games.df, user_data.df, matches))
