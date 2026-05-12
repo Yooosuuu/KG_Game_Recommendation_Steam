@@ -169,7 +169,7 @@ class SteamDataFrame:
                         .drop_duplicates(subset=[user_col, appid_col])
                         .reset_index(drop=True))
         return self
-
+    
     def keep_action(self, action_col='action', action_value='play'):
         """ Keep only rows with a specific action (default: 'play').
             Useful to drop 'purchase' rows and keep only playtime data """

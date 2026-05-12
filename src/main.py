@@ -1,24 +1,27 @@
 import data_preparation as dp
 import kg_construction as kg
 import datalog_rules as dr
+import kg_embedding as kge
+import logging
+
 
 if __name__ == "__main__":
-    steam_games = dp.SteamDataFrame().load('../data/cleaned_steam_games.csv')
-    user_data = dp.SteamDataFrame().load('../data/cleaned_user_data.csv')    
-    merged_df = dp.SteamDataFrame().load('../data/merged_user_game_data.csv')
     
-    for col in ['genres', 'tags', 'developers', 'publishers']:
-        merged_df.parse_list_column(col)
+    ##### DATA PREPARATION #####
+    # steam_games = dp.SteamDataFrame().load('../data/cleaned_steam_games.csv')
+    # user_data = dp.SteamDataFrame().load('../data/cleaned_user_data.csv')    
+    # merged_df = dp.SteamDataFrame().load('../data/merged_user_game_data.csv')
+    
+    # for col in ['genres', 'tags', 'developers', 'publishers']:
+    #     merged_df.parse_list_column(col)
 
     # with kg.KnowledgeGraphBuilder(merged_df.filter_users_by_game_count(min_games=3)) as kg_builder:
     #     kg_builder.create_all_nodes()
     #     kg_builder.create_all_relationships()
     #     kg_builder.print_graph_summary()
     
-    with dr.DatalogReasoner() as rule_applier:
-        rule_applier.reset_similar_to()
-        rule_applier.apply_all_rules()
-        rule_applier.print_graph_summary()
+    
+    ##### Merged data preparation #####
 
     # matches = dp.match_games(steam_games.df, user_data.df)
     # merged_df = (dp.SteamDataFrame(dp.merge_datasets(steam_games.df, user_data.df, matches))
@@ -28,13 +31,27 @@ if __name__ == "__main__":
     #                                 .filter_play_only())
     # merged_df.save('../data/merged_user_game_data.csv')
     
-    # games_per_user = merged_df.count_games_per_user()
-    # print(f"Total users: {merged_df.count_users()}")
-    # print(f"Total games: {merged_df.count_games()}")
-    # print(f"Average games per user: {games_per_user['game_count'].mean():.2f}")
+    
+    ##### DATALOG REASONING #####
+    
+    # with dr.DatalogReasoner() as rule_applier:
+        # rule_applier.reset_similar_to()
+        # rule_applier.apply_all_rules()
+        # rule_applier.print_graph_summary()
 
-    # for min_g in [2, 3, 4]:
-    #     temp = dp.SteamDataFrame(merged_df.df.copy())
-    #     temp.filter_users_by_game_count(min_games=min_g)
-    #     gpu = temp.count_games_per_user()
-    #     print(f"Min {min_g} games → {gpu.shape[0]} users, {temp.count_games()} distinct games")
+        
+    ##### KG Embedding and Prediction #####
+
+    logging.basicConfig(level=logging.INFO)
+    training = False  # Set to False to skip training and load existing model
+    write_to_neo4j = True  # Set to False to skip writing predictions to Neo4j
+    with kge.KGEmbedder() as embedder:
+        if training:
+            embedder.train(force_retrain=True, pykeen_model='RotatE', create_inverse_triples=True)
+            preds = embedder.predict_similar_to(top_k=10)
+        else:
+            embedder.load_model()
+            preds = embedder.load_predictions("../data/similar_games.csv")
+        embedder.show_best_predictions(preds, top_k=60)
+        if write_to_neo4j:
+            embedder.write_predictions(preds)

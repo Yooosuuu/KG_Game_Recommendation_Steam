@@ -29,20 +29,22 @@ class KnowledgeGraphBuilder(Neo4jConnector):
 
     def create_constraints(self):
         """ Create uniqueness constraints for Game, Genre, Tag, Developer, Publisher and User nodes in Neo4j """
-        with self.driver.session() as session:
-            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (g:Game) REQUIRE g.appid IS UNIQUE")
-            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (g2:Genre) REQUIRE g2.name IS UNIQUE")
-            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (t:Tag) REQUIRE t.name IS UNIQUE")
-            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (d:Developer) REQUIRE d.name IS UNIQUE")
-            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (p:Publisher) REQUIRE p.name IS UNIQUE")
-            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (u:User) REQUIRE u.ID IS UNIQUE")
+        constraints = [
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (g:Game) REQUIRE g.appid IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (g2:Genre) REQUIRE g2.name IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (t:Tag) REQUIRE t.name IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (d:Developer) REQUIRE d.name IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (p:Publisher) REQUIRE p.name IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (u:User) REQUIRE u.ID IS UNIQUE",
+        ]
+        for q in constraints:
+            self._run_query(q)
             
     def _batch_insert(self, query, data_list, batch_size=100):
         """ Helper function to insert data in batches to Neo4j using UNWIND for efficiency """
-        with self.driver.session() as session:
-            for i in range(0, len(data_list), batch_size):
-                batch = data_list[i:i+batch_size]
-                session.run(query, {"batch": batch})
+        for i in range(0, len(data_list), batch_size):
+            batch = data_list[i:i+batch_size]
+            self._run_query(query, {"batch": batch})
     
     def create_game_nodes(self):
         games_data = self.merged_df.df[['appid', 'name', 'release_date', 'price', 'metacritic_score', 'user_score', 'average_playtime_forever', 'estimated_owners', 'positive', 'negative', 'pct_pos_total']].drop_duplicates(subset='appid').to_dict('records')

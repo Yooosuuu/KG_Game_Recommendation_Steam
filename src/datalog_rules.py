@@ -8,10 +8,6 @@ import pandas as pd
 class DatalogReasoner(Neo4jConnector):
     def __init__(self):
         super().__init__()
-        
-    def __enter__(self):
-        self.connect()
-        return self
             
     def _execute_rule(self, query):
         """ Helper function to execute a Cypher query and return the number of relationships created """
@@ -21,25 +17,28 @@ class DatalogReasoner(Neo4jConnector):
 
     def _fetch_scores(self, query):
         """ Helper function to fetch scores from Neo4j and return as a DataFrame """
-        with self.driver.session() as session:
-            results = session.run(query).data()
-        return pd.DataFrame(results)
+        rows = self._run_query(query)
+        return pd.DataFrame(rows)
     
     def _write_similar_to(self, df, batch_size=200):
         """ Write top 10 SIMILAR_TO relationships per game to Neo4j """
         records = df.to_dict('records')
-        with self.driver.session() as session:
-            for i in range(0, len(records), batch_size):
-                batch = records[i:i+batch_size]
-                session.run("""
-                    UNWIND $batch AS row
-                    MATCH (g1:Game {appid: row.appid1})
-                    MATCH (g2:Game {appid: row.appid2})
-                    MERGE (g1)-[r:SIMILAR_TO]->(g2)
-                    SET r.score = row.score
-                    MERGE (g2)-[r2:SIMILAR_TO]->(g1)
-                    SET r2.score = row.score
-                """, {"batch": batch})
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i+batch_size]
+            self._run_query(
+                """
+                UNWIND $batch AS row
+                MATCH (g1:Game {appid: row.appid1})
+                MATCH (g2:Game {appid: row.appid2})
+                MERGE (g1)-[r:SIMILAR_TO]->(g2)
+                SET r.score = row.score
+                SET r.source = 'datalog'
+                MERGE (g2)-[r2:SIMILAR_TO]->(g1)
+                SET r2.score = row.score
+                SET r2.source = 'datalog'
+                """,
+                {"batch": batch},
+            )
         return len(records)
 
     def compute_genre_tag_scores(self):
@@ -137,15 +136,13 @@ class DatalogReasoner(Neo4jConnector):
             WITH g, collect(r) AS rels
             FOREACH (r IN rels[10..] | DELETE r)
         """
-        with self.driver.session() as session:
-            session.run(query)
+        self._run_query(query)
         print("Top 10 enforced per game")
     
     def reset_similar_to(self):
         """ Delete all SIMILAR_TO relationships """
-        with self.driver.session() as session:
-            result = session.run("MATCH ()-[r:SIMILAR_TO]->() DELETE r")
-            print(f"SIMILAR_TO relationships deleted")
+        self._run_query("MATCH ()-[r:SIMILAR_TO]->() DELETE r")
+        print(f"SIMILAR_TO relationships deleted")
 
     def apply_all_rules(self):
         """ Compute all scores, merge, keep top 10 per game, write to Neo4j """
@@ -171,3 +168,15 @@ class DatalogReasoner(Neo4jConnector):
         self.enforce_top10()
         print(f"Total SIMILAR_TO written: {created}")
         self.print_graph_summary()
+        
+    def datalog_recommendations_per_game(self, appid, top_k=10):
+        """ Get Datalog recommendations for a game """
+        # similar_to relationships must have source="datalog" to distinguish them from KG embedding predictions
+        query="""
+            MATCH (g:Game {appid: $appid})-[r:SIMILAR_TO]->(rec:Game)
+            WHERE r.source = 'datalog'
+            RETURN rec.appid AS recommended_appid, rec.name AS recommended_name, rec.genres AS genres, rec.tags AS tags, rec.developers AS developers, rec.publishers AS publishers
+            ORDER BY r.score DESC
+            LIMIT $top_k
+        """
+        return self._fetch_scores(query, {"appid": appid, "top_k": top_k})
