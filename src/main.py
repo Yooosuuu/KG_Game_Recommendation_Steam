@@ -2,6 +2,7 @@ import data_preparation as dp
 import kg_construction as kg
 import datalog_rules as dr
 import kg_embedding as kge
+import interface
 import logging
 
 
@@ -42,16 +43,21 @@ if __name__ == "__main__":
         
     ##### KG Embedding and Prediction #####
 
-    logging.basicConfig(level=logging.INFO)
-    training = False  # Set to False to skip training and load existing model
-    write_to_neo4j = True  # Set to False to skip writing predictions to Neo4j
-    with kge.KGEmbedder() as embedder:
-        if training:
-            embedder.train(force_retrain=True, pykeen_model='RotatE', create_inverse_triples=True)
-            preds = embedder.predict_similar_to(top_k=10)
-        else:
-            embedder.load_model()
-            preds = embedder.load_predictions("../data/similar_games.csv")
-        embedder.show_best_predictions(preds, top_k=60)
-        if write_to_neo4j:
-            embedder.write_predictions(preds)
+    # logging.basicConfig(level=logging.INFO)
+    # training = False  # Set to False to skip training and load existing model
+    # write_to_neo4j = True  # Set to False to skip writing predictions to Neo4j
+    # with kge.KGEmbedder() as embedder:
+    #     if training:
+    #         embedder.train(force_retrain=True, pykeen_model='RotatE', create_inverse_triples=True)
+    #         preds = embedder.predict_similar_to(top_k=10)
+    #     else:
+    #         embedder.load_model()
+    #         preds = embedder.load_predictions("../data/similar_games.csv")
+    #     embedder.show_best_predictions(preds, top_k=60)
+    #     if write_to_neo4j:
+    #         embedder.write_predictions(preds)
+    
+    ##### INTERFACE #####
+    
+    app = interface.KG_Interface()
+    app.run()

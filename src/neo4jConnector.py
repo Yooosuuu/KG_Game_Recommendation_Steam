@@ -5,8 +5,8 @@ from neo4j import GraphDatabase
 class Neo4jConnector:
     """Base class for Neo4j connection management"""
     
-    def __init__(self):
-        self.driver = None
+    def __init__(self, driver=None):
+        self.driver = driver
     
     def connect(self):
         env_path = find_dotenv()

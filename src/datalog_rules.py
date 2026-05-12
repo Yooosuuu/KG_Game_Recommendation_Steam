@@ -1,23 +1,20 @@
-from dotenv import load_dotenv
-from neo4j import GraphDatabase
-import os
 from neo4jConnector import Neo4jConnector
 import tqdm
 import pandas as pd
 
 class DatalogReasoner(Neo4jConnector):
-    def __init__(self):
-        super().__init__()
-            
+    def __init__(self, driver=None):
+        super().__init__(driver=driver)
+
     def _execute_rule(self, query):
         """ Helper function to execute a Cypher query and return the number of relationships created """
         with self.driver.session() as session:
             result = session.run(query)
             return result.consume().counters.relationships_created
 
-    def _fetch_scores(self, query):
+    def _fetch_scores(self, query, params=None):
         """ Helper function to fetch scores from Neo4j and return as a DataFrame """
-        rows = self._run_query(query)
+        rows = self._run_query(query, params)
         return pd.DataFrame(rows)
     
     def _write_similar_to(self, df, batch_size=200):
@@ -171,11 +168,10 @@ class DatalogReasoner(Neo4jConnector):
         
     def datalog_recommendations_per_game(self, appid, top_k=10):
         """ Get Datalog recommendations for a game """
-        # similar_to relationships must have source="datalog" to distinguish them from KG embedding predictions
         query="""
             MATCH (g:Game {appid: $appid})-[r:SIMILAR_TO]->(rec:Game)
             WHERE r.source = 'datalog'
-            RETURN rec.appid AS recommended_appid, rec.name AS recommended_name, rec.genres AS genres, rec.tags AS tags, rec.developers AS developers, rec.publishers AS publishers
+            RETURN g.appid AS head_appid, rec.appid AS recommended_appid, r.score AS score
             ORDER BY r.score DESC
             LIMIT $top_k
         """

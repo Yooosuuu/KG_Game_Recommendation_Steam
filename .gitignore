@@ -3,4 +3,3 @@ src/__pycache__
 neo4j_Credentials.txt
 models
 emb_resume.md
-src/interface.py

@@ -27,8 +27,8 @@ class KGEmbedder(Neo4jConnector):
     ]
     REL_SIMILAR = 'SIMILAR_TO'
 
-    def __init__(self, model_dir='../models', use_typed_labels=True, relation_types=None):
-        super().__init__()
+    def __init__(self, model_dir='../models', use_typed_labels=True, relation_types=None, driver=None):
+        super().__init__(driver=driver)
         self.model = None
         self.factory = None
         self.model_dir = model_dir
@@ -142,9 +142,9 @@ class KGEmbedder(Neo4jConnector):
         # Keep KGEmbedder as the core signal while favoring coherent metadata overlap.
         return (0.45 * tag_score) + (0.35 * genre_score) + (0.15 * shared_dev) + (0.05 * shared_pub)
 
-    def _fetch_scores(self, query):
+    def _fetch_scores(self, query, params=None):
         """ Helper function to fetch scores from Neo4j and return as a DataFrame """
-        rows = self._run_query(query)
+        rows = self._run_query(query, params)
         return pd.DataFrame(rows)
     
     def _fetch_existing_similar_to(self):
@@ -780,13 +780,12 @@ class KGEmbedder(Neo4jConnector):
         return len(records)
 
     def kg_embedding_recommendations(self, appid, top_k=10):
-        """ Get model best recommendations for a given appid (then ask neo4j)"""
+        """ Get KG embedding recommendations for a given appid """
         query="""
             MATCH (g:Game {appid: $appid})-[r:SIMILAR_TO]->(rec:Game)
             WHERE r.source = 'kg_embedding'
-            RETURN rec.appid AS recommended_appid, rec.name AS recommended_name, rec.genres AS genres, rec.tags AS tags, rec.developers AS developers, rec.publishers AS publishers
+            RETURN g.appid AS head_appid, rec.appid AS recommended_appid, r.score AS score
             ORDER BY r.score DESC
             LIMIT $top_k
         """
         return self._fetch_scores(query, {"appid": appid, "top_k": top_k})
-        
