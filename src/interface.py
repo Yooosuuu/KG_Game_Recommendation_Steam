@@ -4,6 +4,12 @@ import kg_embedding as kge
 import streamlit as st
 from neo4jConnector import Neo4jConnector
 
+"""Interface module for the Steam Game Recommendation system.
+This module was for msot part written by AI with some adjustments to match the project structure and ensure compatibility with the Neo4jConnector and other components. It defines a Streamlit-based interface that allows users to select a game and view recommendations based on both Datalog reasoning and KG embedding, as well as a fused view combining both methods.
+prompt : 
+Given my code, what technology would you recommend for the interface? I was thinking of creating a fairly basic interface (which could be improved later) that, when given a game name as input, outputs a list of games we might like based on the knowledge graph I’ve implemented. I would need three different views for the three recommendation methods (data log rule, embedding, and a mix of both).
+"""
+
 # Cache functions to optimize performance in Streamlit interface and allow autocomplete search for game names.
 @st.cache_data
 def load_all_games():
@@ -16,7 +22,7 @@ def load_all_games():
 # Cache the Neo4j driver to reuse across the Streamlit session and avoid reconnecting on every query.
 @st.cache_resource
 def get_neo4j_driver():
-    """Cache the Neo4j driver for the entire Streamlit session"""
+    """Cache the Neo4j driver for the entire Streamlit session - Written by AI """
     from dotenv import load_dotenv, find_dotenv
     import os
     from neo4j import GraphDatabase
@@ -41,6 +47,7 @@ class KG_Interface(Neo4jConnector):
         self.kg_embedder = kge.KGEmbedder(driver=self.driver)
 
     def run(self):
+        """ Written by AI """
         st.title("Steam Game Recommendation", anchor="top", text_alignment="center")
         st.set_page_config(page_title="Steam Game Recommender", layout="wide")
 
@@ -91,6 +98,9 @@ class KG_Interface(Neo4jConnector):
         return result[0]['appid'] if result else None
     
     def reciprocal_rank_fusion(self, appid, top_k=10, k=10):
+        """ Apply Reciprocal Rank Fusion to combine Datalog and KG embedding recommendations 
+            Written by AI and then adjusted to handle edge cases where one or both recommendation sources may be empty, and to normalize scores before fusion.
+        """
         datalog_df = self.datalog_reasoner.datalog_recommendations_per_game(appid, top_k=top_k*2)
         embedding_df = self.kg_embedder.kg_embedding_recommendations(appid, top_k=top_k*2)
         
@@ -117,7 +127,7 @@ class KG_Interface(Neo4jConnector):
             datalog_df['rrf_score'] = (datalog_df['score'] - min_score) / (max_score - min_score + 1e-8)
             return datalog_df[['head_appid', 'recommended_appid', 'rrf_score', 'sources']].head(top_k)
         
-        # Both sources available - continue with RRF fusion (rest of code unchanged)
+        # Both sources available - continue with RRF fusion
         datalog_df['source'] = 'datalog'
         embedding_df['source'] = 'kg_embedding'
         
@@ -139,6 +149,7 @@ class KG_Interface(Neo4jConnector):
         return fused_df
     
     def display_three_views(self, datalog_df, embedding_df, fused_df):
+        """ Written by AI and then adjusted """
         datalog_view = datalog_df.copy()
         embedding_view = embedding_df.copy()
         fused_view = fused_df.copy()

@@ -69,8 +69,6 @@ class SteamDataFrame:
     def __init__(self, df=None):
         self.df = df
 
-    # ── I/O ──────────────────────────────────────────────────────────────────
-
     def load(self, file_path, encoding='utf-8'):
         """ Load csv with encoding fallback """
         try:
@@ -85,7 +83,7 @@ class SteamDataFrame:
         self.df.to_csv(file_path, index=False)
         return self
 
-    # ── Inspection ───────────────────────────────────────────────────────────
+    # Inspection
 
     def describe(self):
         """ Quick overview of the dataframe """
@@ -112,7 +110,7 @@ class SteamDataFrame:
         return self.df[self.df[game_col] == game_name][user_col].nunique()
     
 
-    # ── Transformations ──────────────────────────────────────────────────────
+    # Transformations
 
     def delete_columns(self, columns):
         """ Delete specified columns from dataframe """
@@ -120,6 +118,7 @@ class SteamDataFrame:
         return self
     
     def parse_list_column(self, column_name):
+        """ Parse a column that contains lists or dicts stored as strings into actual lists. """
         def parse(val):
             if pd.isna(val):
                 return []

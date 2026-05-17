@@ -1,5 +1,4 @@
 src/__pycache__
 .env
 neo4j_Credentials.txt
-models
 emb_resume.md

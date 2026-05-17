@@ -39,7 +39,7 @@ class DatalogReasoner(Neo4jConnector):
         return len(records)
 
     def compute_genre_tag_scores(self):
-        """ Rule 1 : SIMILAR_TO(X,Y) ← HAS_GENRE(X,G), HAS_GENRE(Y,G), HAS_TAG(X,T), HAS_TAG(Y,T), X≠Y
+        """ Rule 1 : SIMILAR_TO(X,Y) <- HAS_GENRE(X,G), HAS_GENRE(Y,G), HAS_TAG(X,T), HAS_TAG(Y,T), X≠Y
             Score : (1 + shared_genres) + (0.5 * shared_tags), min 3 shared tags """
         query = """
             MATCH (g1:Game)-[:HAS_GENRE]->(genre:Genre)<-[:HAS_GENRE]-(g2:Game)
@@ -56,7 +56,7 @@ class DatalogReasoner(Neo4jConnector):
         return df
 
     def compute_developer_scores(self):
-        """ Rule 2 : SIMILAR_TO(X,Y) ← DEVELOPED_BY(X,D), DEVELOPED_BY(Y,D), X≠Y
+        """ Rule 2 : SIMILAR_TO(X,Y) <- DEVELOPED_BY(X,D), DEVELOPED_BY(Y,D), X≠Y
             Score : +3 """
         query = """
             MATCH (g1:Game)-[:DEVELOPED_BY]->(dev:Developer)<-[:DEVELOPED_BY]-(g2:Game)
@@ -70,7 +70,7 @@ class DatalogReasoner(Neo4jConnector):
         return df
 
     def compute_publisher_scores(self):
-        """ Rule 3 : SIMILAR_TO(X,Y) ← PUBLISHED_BY(X,P), PUBLISHED_BY(Y,P), X≠Y
+        """ Rule 3 : SIMILAR_TO(X,Y) <- PUBLISHED_BY(X,P), PUBLISHED_BY(Y,P), X≠Y
             Score : +1 """
         query = """
             MATCH (g1:Game)-[:PUBLISHED_BY]->(pub:Publisher)<-[:PUBLISHED_BY]-(g2:Game)
@@ -83,7 +83,7 @@ class DatalogReasoner(Neo4jConnector):
         return df
 
     def compute_coplayed_scores(self):
-        """ Rule 4 : CO_PLAYED(X,Y) ← PLAYED(U,X), PLAYED(U,Y), common_users >= 5
+        """ Rule 4 : CO_PLAYED(X,Y) <- PLAYED(U,X), PLAYED(U,Y), common_users >= 5
             Score : common_users / (total_plays_X + total_plays_Y) * 2 -> normalized score between 0 and 2 """
         query = """
             MATCH (u:User)-[:PLAYED]->(g1:Game)

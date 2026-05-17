@@ -139,7 +139,6 @@ class KGEmbedder(Neo4jConnector):
         shared_dev = 1.0 if head_profile['developers'] & tail_profile['developers'] else 0.0
         shared_pub = 1.0 if head_profile['publishers'] & tail_profile['publishers'] else 0.0
 
-        # Keep KGEmbedder as the core signal while favoring coherent metadata overlap.
         return (0.45 * tag_score) + (0.35 * genre_score) + (0.15 * shared_dev) + (0.05 * shared_pub)
 
     def _fetch_scores(self, query, params=None):
@@ -163,7 +162,7 @@ class KGEmbedder(Neo4jConnector):
         return known_links
 
     def _get_model_game_label_maps(self):
-        """Map between Neo4j appids and model entity labels."""
+        """Map between Neo4j appids and model entity labels. - Written by AI """
         rows = self._run_query("MATCH (g:Game) RETURN toString(g.appid) AS appid")
         game_ids = [str(r.get('appid')) for r in rows if r.get('appid') is not None]
 
@@ -189,59 +188,6 @@ class KGEmbedder(Neo4jConnector):
             logger.warning("Skipped %s games absent from the trained entity vocabulary.", missing)
 
         return appid_to_model_label, model_label_to_appid
-
-    def _mmr_rerank(self, candidates_df, profiles, top_k=10, lambda_diversity=0.7, candidate_pool=50):
-        """Rerank recommendations using Maximal Marginal Relevance (MMR)."""
-        if candidates_df.empty:
-            return candidates_df
-
-        work_df = candidates_df.sort_values('score', ascending=False).head(candidate_pool).copy()
-        work_df = work_df.drop_duplicates(subset=['tail_appid'])
-        work_df['tail_appid'] = work_df['tail_appid'].astype(str)
-
-        def feature_set(appid):
-            profile = profiles.get(appid, {})
-            features = set()
-            for key in ('genres', 'tags', 'developers', 'publishers'):
-                features |= set(profile.get(key) or [])
-            return features
-
-        feature_cache = {appid: feature_set(appid) for appid in work_df['tail_appid']}
-        score_map = work_df.set_index('tail_appid')['score'].to_dict()
-
-        selected = []
-        remaining = list(work_df['tail_appid'])
-        while remaining and len(selected) < top_k:
-            best_id = None
-            best_score = None
-            for cand_id in remaining:
-                relevance = score_map.get(cand_id, 0.0)
-                if not selected:
-                    mmr_score = relevance
-                else:
-                    max_sim = max(
-                        self._jaccard_similarity(feature_cache[cand_id], feature_cache[sel_id])
-                        for sel_id in selected
-                    )
-                    mmr_score = (lambda_diversity * relevance) - ((1 - lambda_diversity) * max_sim)
-
-                if best_score is None or mmr_score > best_score:
-                    best_score = mmr_score
-                    best_id = cand_id
-
-            if best_id is None:
-                break
-            selected.append(best_id)
-            remaining.remove(best_id)
-
-        if not selected:
-            return work_df.head(top_k)
-
-        order = {appid: idx + 1 for idx, appid in enumerate(selected)}
-        reranked = work_df[work_df['tail_appid'].isin(order)].copy()
-        reranked['mmr_rank'] = reranked['tail_appid'].map(order)
-        reranked = reranked.sort_values('mmr_rank').drop(columns=['mmr_rank'])
-        return reranked
 
     def export_triplets(self, relation_types=None, use_typed_labels=None):
         """Export relationships as triplets (head, relation, tail) for KGEmbedder training."""
@@ -299,13 +245,13 @@ class KGEmbedder(Neo4jConnector):
         return triplets
 
     def _save_training_config(self, config, model_dir):
-        """Persist training configuration to a JSON file."""
+        """Save training configuration to a JSON file."""
         path = os.path.join(model_dir, 'kg_training_config.json')
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
 
     def _load_training_config(self, model_dir):
-        """Load training configuration if present on disk."""
+        """Load training configuration if present."""
         path = os.path.join(model_dir, 'kg_training_config.json')
         if not os.path.exists(path):
             return {}
@@ -367,7 +313,7 @@ class KGEmbedder(Neo4jConnector):
             optimizer='Adam',
             optimizer_kwargs={'lr': learning_rate},
             negative_sampler='basic',
-            negative_sampler_kwargs={'num_negs_per_pos': num_negs_per_pos},
+            negative_sampler_kwargs={'num_negs_per_pos': num_negs_per_pos}, # generates negative samples with a specified number of negative samples per positive sample to help the model learn to distinguish between true and false triples more effectively.
             training_kwargs={'num_epochs': epochs, 'batch_size': batch_size},
             random_seed=random_state,
         )
@@ -417,7 +363,7 @@ class KGEmbedder(Neo4jConnector):
             additional_filter_triples=additional_filter_triples or None,
         )
 
-        # Format MetricResults into a readable dict/string for logging
+        # Format MetricResults into a readable dict/string for logging - written by AI
         metrics_obj = metrics
         metrics_dict = None
         if hasattr(metrics_obj, 'to_flat_dict'):
@@ -457,11 +403,8 @@ class KGEmbedder(Neo4jConnector):
         exclude_existing_links=True,
         head_game_ids=None,
         normalize_method='minmax',
-        diversify=False,
-        diversity_lambda=0.7,
-        diversity_candidates=50,
     ):
-        """Predict SIMILAR_TO links using KGEmbedder with optional metadata reranking."""
+        """Predict SIMILAR_TO links using KGEmbedder with optional metadata reranking. - Assisted by AI for adjustments to handle existing links, ensure robustness and debugging."""
         if self.model is None or self.factory is None:
             raise ValueError("Model and triples factory must be loaded before prediction.")
         if self.REL_SIMILAR not in self.factory.relation_to_id:
@@ -523,7 +466,6 @@ class KGEmbedder(Neo4jConnector):
                     pbar.update(1)
                     continue
 
-                # KGEmbedder score is often negative because PyKEEN uses the negative distance.
                 df['kg_score'] = df['score']
                 df['kg_score_norm'] = self._normalize_scores(df['kg_score'], method=normalize_method)
                 df['meta_score'] = df['tail_appid'].map(
@@ -535,21 +477,11 @@ class KGEmbedder(Neo4jConnector):
                     if not filtered.empty:
                         df = filtered
 
-                # Final ranking score keeps KGEmbedder dominant while improving semantic coherence.
+                # Final ranking score keeps KGEmbedder dominant with some influence from metadata.
                 df['score'] = (alpha * df['kg_score_norm']) + ((1 - alpha) * df['meta_score'])
                 df = df.sort_values(['score', 'kg_score'], ascending=False)
                 df = df.drop_duplicates(subset=['tail_appid'])
-
-                if diversify:
-                    df = self._mmr_rerank(
-                        df,
-                        profiles,
-                        top_k=top_k,
-                        lambda_diversity=diversity_lambda,
-                        candidate_pool=diversity_candidates,
-                    )
-                else:
-                    df = df.head(top_k)
+                df = df.head(top_k)
 
                 if df.empty:
                     pbar.update(1)
@@ -731,7 +663,7 @@ class KGEmbedder(Neo4jConnector):
         return best_preds
 
     def write_predictions(self, predictions, top_k=10, reset_existing=False, batch_size=500):
-        """Write top-k predicted SIMILAR_TO relationships to Neo4j with score metadata."""
+        """Write top-k predicted SIMILAR_TO relationships to Neo4j with score metadata. - Written by AI """
         if predictions is None or predictions.empty:
             logger.warning("No predictions to write.")
             return 0

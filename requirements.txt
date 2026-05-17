@@ -1,0 +1,8 @@
+pandas
+rapidfuzz
+tqdm
+neo4j
+python-dotenv
+torch
+pykeen
+streamlit

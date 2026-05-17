@@ -1,0 +1,17 @@
+{
+  "relation_types": [
+    "HAS_GENRE",
+    "HAS_TAG",
+    "DEVELOPED_BY",
+    "PUBLISHED_BY",
+    "SIMILAR_TO"
+  ],
+  "use_typed_labels": true,
+  "embedding_dim": 256,
+  "epochs": 250,
+  "batch_size": 1024,
+  "learning_rate": 0.0005,
+  "num_negs_per_pos": 10,
+  "create_inverse_triples": true,
+  "random_state": 42
+}
