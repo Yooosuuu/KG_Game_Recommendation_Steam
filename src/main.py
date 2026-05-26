@@ -63,7 +63,7 @@ if __name__ == "__main__":
     if RUN_KG_EMBEDDING:
         logging.basicConfig(level=logging.INFO)
         training = False  # Set to False to skip training and load existing model
-        write_to_neo4j = True  # Set to False to skip writing predictions to Neo4j
+        write_to_neo4j = False  # Set to False to skip writing predictions to Neo4j
         with kge.KGEmbedder() as embedder:
             if training:
                 embedder.train(force_retrain=True, pykeen_model='RotatE', create_inverse_triples=True)
