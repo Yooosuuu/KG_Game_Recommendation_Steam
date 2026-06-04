@@ -4,6 +4,18 @@ import datalog_rules as dr
 import kg_embedding as kge
 import interface
 import logging
+import os
+import subprocess
+import sys
+
+
+def _is_running_with_streamlit():
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+    except Exception:
+        return False
+
+    return get_script_run_ctx() is not None
 
 
 if __name__ == "__main__":
@@ -15,6 +27,11 @@ if __name__ == "__main__":
     RUN_DATALOG_RULES = False
     RUN_KG_EMBEDDING = False
     RUN_INTERFACE = True
+
+    if RUN_INTERFACE:
+        if not _is_running_with_streamlit():
+            subprocess.run([sys.executable, "-m", "streamlit", "run", os.path.abspath(__file__)], check=False)
+            sys.exit(0)
     
     # Initialize shared variables
     merged_df = None
@@ -62,11 +79,11 @@ if __name__ == "__main__":
     ##### KG Embedding and Prediction #####
     if RUN_KG_EMBEDDING:
         logging.basicConfig(level=logging.INFO)
-        training = False  # Set to False to skip training and load existing model
+        training = True  # Set to False to skip training and load existing model
         write_to_neo4j = False  # Set to False to skip writing predictions to Neo4j
         with kge.KGEmbedder() as embedder:
             if training:
-                embedder.train(force_retrain=True, pykeen_model='RotatE', create_inverse_triples=True)
+                embedder.train(force_retrain=True, pykeen_model='TransE', create_inverse_triples=False)
                 preds = embedder.predict_similar_to(top_k=10)
             else:
                 embedder.load_model()
