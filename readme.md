@@ -17,21 +17,23 @@ This project builds a knowledge-graph-based recommendation system for Steam game
 - **data/**: CSV datasets used by the project
   - `steam_games.csv`, `user_data.csv`, `cleaned_steam_games.csv`, `cleaned_user_data.csv`, `merged_user_game_data.csv`, `similar_games.csv`
 - **models/**: Configuration and training files for embedding and KG training
-  - `kg_factory.pkl` — saved PyKEEN TriplesFactory
-  - `kg_model.pkl` — pretrained KG embedding model
-  - `kg_training_config.json` — configuration for KG embedding/training
+  - `kg_factory.pkl` - saved PyKEEN TriplesFactory
+  - `kg_model.pkl` - pretrained KG embedding model
+  - `kg_training_config.json` - configuration for KG embedding/training
 - **src/**: Main source code
-  - `data_preparation.py` — cleaning and preprocessing raw CSV data
-  - `kg_construction.py` — builds the knowledge graph (nodes, relationships)
-  - `kg_embedding.py` — routines to compute or load graph embeddings
-  - `datalog_rules.py` — Datalog or logic rules used for inference
-  - `neo4jConnector.py` — helper to connect and push data to Neo4j
-  - `interface.py` — simple Streamlit interface to run recommendations
-  - `main.py` — example entrypoint to run the pipeline or experiments
+  - `data_preparation.py` - cleaning and preprocessing raw CSV data
+  - `kg_construction.py` - builds the knowledge graph (nodes, relationships)
+  - `kg_embedding.py` - routines to compute or load graph embeddings
+  - `datalog_rules.py` - Datalog or logic rules used for inference
+  - `neo4jConnector.py` - helper to connect and push data to Neo4j
+  - `interface.py` - simple Streamlit interface to run recommendations
+  - `main.py` - example entrypoint to run the pipeline or experiments
 - `neo4j_Credentials.txt` : local file storing Neo4j connection details (not included in the repo for security)
-- `readme.md` — this file
+- `readme.md` - this file
+- `requirements.txt` - Python dependencies for the project
+- `.env` - (not included) used to set environment variables for Neo4j credentials (NEO4J_URI=###, NEO4J_USERNAME=###, NEO4J_PASSWORD=###)
 
-## Installation
+## Installation/Setup
 
 1. Install Python 3.8+.
 
@@ -41,16 +43,22 @@ This project builds a knowledge-graph-based recommendation system for Steam game
 pip install -r requirements.txt
 ```
 
-## Configuration
+3. Neo4j:
+    - Create a Neo4j instance and note the connection URI, username, and password.
+    - create a .env file in the root of the project with the following content (replace with your credentials):
+```
+NEO4J_URI=###
+NEO4J_USERNAME=###
+NEO4J_PASSWORD=###
+```
 
-- Neo4j: Create a local Neo4j instance and place connection info in `neo4j_Credentials.txt` or set environment variables. Keep credentials private.
-- `models/kg_training_config.json` contains training and model parameters — edit as needed before running embedding scripts.
+4. `models/kg_training_config.json` contains training and model parameters.
 
 ## Usage
 
 1. Prepare data (clean and merge): data_preparation.py
 
-2. Build and populate the knowledge graph in Neo4j: kg_construction.py
+2. Build the knowledge graph in Neo4j: kg_construction.py
 
 3. Train or compute embeddings: kg_embedding.py
 
